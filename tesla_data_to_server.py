@@ -1,3 +1,8 @@
+#Final Database Project - Luke Ding and Pat Rademacher
+#Charles Winstead
+#June 4, 2019
+#CS 586
+
 import psycopg2 as p
 import pandas as pd
 import io
@@ -10,8 +15,13 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import TEXT, MetaData, Table, Column, Float
 import csv
 
+#initialize engine to connect to class Database
+
 engine = create_engine('postgresql://s19wdb28:q4gB6xah*z@dbclass.cs.pdx.edu:5432/s19wdb28')
 conn = engine.connect()
+
+# read in all excel and CSV sheets through Pandas
+
 Stores = pd.read_excel('Datasheet.xlsx', Sheetname=0)
 Cars = pd.read_csv('Datasheet.csv')
 service_centers = pd.read_csv('service_centers.csv', encoding = 'latin-1')
@@ -23,6 +33,10 @@ storeemp = pd.read_csv('storeemp.csv', encoding = 'latin-1')
 serveemp = pd.read_csv('servemp.csv', encoding = 'latin-1')
 appointments = pd.read_csv('REALAPPOINTMENTS.csv', encoding = 'latin-1')
 waittimes = pd.read_csv('waittimes.csv', encoding = 'latin-1')
+
+
+#initialize proper list sizes for transferring CSV and Excel sheets to list data types
+
 
 superchargers_array = [''] * 10
 cust = [''] * 5
@@ -47,6 +61,8 @@ for i in range(2):
     sve[i] = list(serveemp.iloc[:, i])
 for i in range(8):
     app[i] = list(appointments.iloc[:, i])
+
+#had a strange instance when reading in CSV files from home through PSU's server - had to eliminate following character
 
 cust[1] = [s.replace('Ê', ' ') for s in cust[1]]
 cust[4] = [s.replace('Ê', '') for s in cust[4]]
@@ -99,6 +115,8 @@ service_local.append(service_centers.iloc[:, 5])
 service_phone.append(service_centers.iloc[:, 6]) 
 service_google.append(service_centers.iloc[:, 7])
 
+#convert lists to Pandas' DataFrame data type
+
 df_stores = pd.DataFrame(data = {'store_id' : Store_StoreID[0], 'country' : Store_Country[0], 'name' : Store_Name[0], 'address' : Store_Address[0], 'extended' : Store_Extended[0], 'local' : Store_Local[0], 'phone' : Store_Phone[0], 'google_review_rating' : Store_GoogleReviewRating[0]})
 
 df_cars = pd.DataFrame(data = {'model' : Cars_Model[0], 'subtype' : Cars_Subtype[0], 'range' : Cars_Range[0], 'zto60' : Cars_Zto60[0]})
@@ -120,6 +138,10 @@ df_sve = pd.DataFrame(data = {'service_id': sve[0], 'employee_id': sve[1]})
 df_wt = pd.DataFrame(data = {'model': wt[0], 'subtype': wt[1], 'country': wt[2], 'wait_time': wt[3], 'price': wt[4]})
 
 df_app = pd.DataFrame(data = {'appointment_id': app[0], 'model': app[1], 'subtype': app[2], 'service_id': app[3], 'employee_id': app[4], 'customer_id': app[5], 'date': app[6], 'time': app[7]}) 
+
+
+#use the Pandas 'to_sql' function which converts DataFrames into proper data type to be process for postgres SQL
+
 
 df_stores.to_sql(name='stores', con=engine, if_exists = 'replace', index=False, dtype = {"store_id": Integer(), "country": String(), "name" : String(), "address" : String, "extended" : String(), "local" : String(), "phone" : String(), "google_review_rating": Integer()})
 
@@ -155,3 +177,12 @@ conn.execute('ALTER TABLE service_employees ADD PRIMARY KEY (service_id, employe
 conn.execute('ALTER TABLE store_employees ADD PRIMARY KEY (store_id, employee_id), ADD CONSTRAINT store_employee_id FOREIGN KEY (store_id) REFERENCES stores(store_id), ADD CONSTRAINT employee_store_id FOREIGN KEY (employee_id) REFERENCES employees(employee_id);')
 conn.execute('ALTER TABLE superchargers ADD PRIMARY KEY (supercharger_id);')
 conn.execute('ALTER TABLE appointments ADD PRIMARY KEY (appointment_id), ADD CONSTRAINT app_empl FOREIGN KEY (employee_id) REFERENCES employees(employee_id), ADD CONSTRAINT app_car FOREIGN KEY(model, subtype) REFERENCES cars(model, subtype), ADD CONSTRAINT app_cust FOREIGN KEY(customer_id) REFERENCES customers(customer_id), ADD CONSTRAINT app_serv FOREIGN KEY (service_id) REFERENCES service_centers(service_id);')
+
+conn.close()
+
+#References
+
+# https://docs.sqlalchemy.org/en/13/core/type_basics.html
+# https://robertdavidwest.com/2014/10/12/python-pandas-%E2%86%92-mysql-using-sqlalchemy-a-k-a-sqlalchemy-for-pandas-users-who-dont-know-sql-the-brave-and-the-foolhardy/
+# https://docs.sqlalchemy.org/en/13/orm/join_conditions.html
+# https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html
